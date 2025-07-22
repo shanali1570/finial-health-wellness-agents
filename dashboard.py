@@ -1,5 +1,6 @@
 import streamlit as st
 import asyncio
+from datetime import datetime
 from agents import Runner
 from agent import main_agent
 from context import UserSessionContext
@@ -17,19 +18,14 @@ if "context" not in st.session_state:
     st.session_state.context = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-if "trigger_logout" not in st.session_state:
-    st.session_state.trigger_logout = False
 if "trigger_clear" not in st.session_state:
     st.session_state.trigger_clear = False
+if "experience" not in st.session_state:
+    st.session_state.experience = ""
+if "show_logout_confirm" not in st.session_state:
+    st.session_state.show_logout_confirm = False
 
-# Handle logout / clear flags
-if st.session_state.trigger_logout:
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    st.session_state.logged_in = False
-    st.session_state.trigger_logout = False
-    st.rerun()
-
+# Handle clear history
 if st.session_state.trigger_clear:
     st.session_state.chat_history = []
     st.session_state.trigger_clear = False
@@ -38,11 +34,34 @@ if st.session_state.trigger_clear:
 # Sidebar menu
 with st.sidebar:
     st.title("☰ Menu")
+
     if st.session_state.logged_in:
-        st.button("🚪 Logout", on_click=lambda: st.session_state.__setitem__("trigger_logout", True))
+        st.markdown(f"👋 Hello, **{st.session_state.context.name}**")
+
+        if st.button("🚪 Logout", key="logout_button"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state.logged_in = False
+            st.rerun()
+
+        # Clear history button
         st.button("🧹 Clear History", on_click=lambda: st.session_state.__setitem__("trigger_clear", True))
+
     st.markdown("---")
     st.markdown("Built with ❤️ by **S. M. Shan-e-Ali** using OpenAI Agents SDK")
+
+
+# Greeting helper
+def get_greeting():
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        return "🌅 Good morning"
+    elif 12 <= hour < 17:
+        return "🌞 Good afternoon"
+    elif 17 <= hour < 21:
+        return "🌇 Good evening"
+    else:
+        return "🌙 Good night"
 
 # Login page
 if not st.session_state.logged_in:
@@ -53,9 +72,9 @@ if not st.session_state.logged_in:
         experience = st.selectbox("💪 Your workout level", ["Beginner", "Intermediate", "Advanced"])
         submitted = st.form_submit_button("Login")
 
-        if submitted and name:
+        if submitted and name.strip():
             st.session_state.logged_in = True
-            st.session_state.context = UserSessionContext(name=name, uid=1)
+            st.session_state.context = UserSessionContext(name=name.strip(), uid=1)
             st.session_state.experience = experience.lower()
             st.rerun()
 
@@ -64,7 +83,8 @@ if not st.session_state.logged_in:
 
 # Main assistant interface
 else:
-    st.title("🧠 Health & Wellness Assistant")
+    greeting = get_greeting()
+    st.title(f"{greeting}, {st.session_state.context.name}! 👋")
     st.markdown("Ask me anything about your health goals, fitness, or nutrition. I'm here to help!")
 
     # Display chat history
